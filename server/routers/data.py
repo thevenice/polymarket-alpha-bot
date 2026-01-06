@@ -1,0 +1,288 @@
+"""Data endpoints for serving pipeline outputs."""
+
+import json
+from pathlib import Path
+from typing import Any
+
+from fastapi import APIRouter, HTTPException, Query
+
+router = APIRouter()
+
+# Data directory - relative to project root
+DATA_DIR = Path(__file__).parent.parent.parent / "data"
+LIVE_DIR = DATA_DIR / "_live"
+
+
+def load_json_file(path: Path) -> Any:
+    """Load JSON file, raise 404 if not found."""
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"File not found: {path.name}")
+    return json.loads(path.read_text())
+
+
+def find_latest_run(output_name: str) -> Path | None:
+    """Find the latest run directory for an output."""
+    output_dir = DATA_DIR / output_name
+    if not output_dir.exists():
+        return None
+
+    runs = sorted(
+        [d for d in output_dir.iterdir() if d.is_dir() and d.name[0].isdigit()],
+        key=lambda p: p.name,
+        reverse=True,
+    )
+    return runs[0] if runs else None
+
+
+def get_run_path(output_name: str, run_id: str | None = None) -> Path:
+    """Get the run path, using latest if run_id not specified."""
+    if run_id:
+        path = DATA_DIR / output_name / run_id
+        if not path.exists():
+            raise HTTPException(status_code=404, detail=f"Run not found: {run_id}")
+        return path
+
+    latest = find_latest_run(output_name)
+    if not latest:
+        raise HTTPException(status_code=404, detail=f"No runs found for {output_name}")
+    return latest
+
+
+# =============================================================================
+# LIVE DATA ENDPOINTS (Production - reads from _live/)
+# =============================================================================
+
+
+@router.get("/opportunities")
+async def get_opportunities(
+    limit: int = Query(100, description="Max number of opportunities to return"),
+    live: bool = Query(True, description="Use live data (default) or historical"),
+    run_id: str | None = Query(None, description="Specific historical run ID"),
+) -> dict[str, Any]:
+    """Get alpha opportunities.
+
+    By default, returns live accumulated data from the production pipeline.
+    Use live=false or specify run_id to access historical script-based runs.
+    """
+    # Try live data first
+    live_path = LIVE_DIR / "opportunities.json"
+    if live and run_id is None and live_path.exists():
+        opportunities = load_json_file(live_path)
+        if isinstance(opportunities, list):
+            opportunities = opportunities[:limit]
+        return {
+            "source": "live",
+            "count": len(opportunities) if isinstance(opportunities, list) else 1,
+            "data": opportunities,
+        }
+
+    # Fall back to historical runs
+    run_path = get_run_path("06_3_export_opportunities", run_id)
+    opportunities = load_json_file(run_path / "opportunities.json")
+
+    if isinstance(opportunities, list):
+        opportunities = opportunities[:limit]
+
+    return {
+        "source": "historical",
+        "run_id": run_path.name,
+        "count": len(opportunities) if isinstance(opportunities, list) else 1,
+        "data": opportunities,
+    }
+
+
+@router.get("/graph")
+async def get_graph(
+    live: bool = Query(True, description="Use live data (default) or historical"),
+    run_id: str | None = Query(None, description="Specific historical run ID"),
+) -> dict[str, Any]:
+    """Get knowledge graph.
+
+    By default, returns live accumulated graph from the production pipeline.
+    """
+    # Try live data first
+    live_path = LIVE_DIR / "graph.json"
+    if live and run_id is None and live_path.exists():
+        graph = load_json_file(live_path)
+        return {
+            "source": "live",
+            "data": graph,
+        }
+
+    # Fall back to historical runs
+    run_path = get_run_path("05_4_build_relation_graph", run_id)
+    graph = load_json_file(run_path / "relation_graph.json")
+
+    return {
+        "source": "historical",
+        "run_id": run_path.name,
+        "data": graph,
+    }
+
+
+@router.get("/events")
+async def get_events(
+    live: bool = Query(True, description="Use live data (default) or historical"),
+    run_id: str | None = Query(None, description="Specific historical run ID"),
+) -> dict[str, Any]:
+    """Get events data.
+
+    By default, returns live accumulated events from the production pipeline.
+    """
+    # Try live data first
+    live_path = LIVE_DIR / "events.json"
+    if live and run_id is None and live_path.exists():
+        events = load_json_file(live_path)
+        return {
+            "source": "live",
+            "count": len(events) if isinstance(events, list) else 1,
+            "data": events,
+        }
+
+    # Fall back to historical runs
+    run_path = get_run_path("01_fetch_events", run_id)
+    events = load_json_file(run_path / "events.json")
+
+    return {
+        "source": "historical",
+        "run_id": run_path.name,
+        "count": len(events) if isinstance(events, list) else 1,
+        "data": events,
+    }
+
+
+@router.get("/entities")
+async def get_entities(
+    live: bool = Query(True, description="Use live data (default) or historical"),
+    run_id: str | None = Query(
+        None, description="Specific run ID, or latest if not specified"
+    ),
+) -> dict[str, Any]:
+    """Get entities.
+
+    By default, returns live accumulated entities from the production pipeline.
+    Use live=false or specify run_id to access historical script-based runs.
+    """
+    # Try live data first (from SQLite state)
+    if live and run_id is None:
+        try:
+            from core.state import load_state
+
+            state = load_state()
+            entities = state.get_all_entities()
+            state.close()
+
+            if entities:
+                return {
+                    "source": "live",
+                    "count": len(entities),
+                    "data": entities,
+                }
+        except Exception:
+            pass  # Fall through to historical
+
+    # Fall back to historical runs
+    run_path = get_run_path("03_3_normalize_entities", run_id)
+    entities = load_json_file(run_path / "entities_normalized.json")
+
+    return {
+        "source": "historical",
+        "run_id": run_path.name,
+        "count": len(entities) if isinstance(entities, list) else 1,
+        "data": entities,
+    }
+
+
+@router.get("/relations")
+async def get_relations(
+    live: bool = Query(True, description="Use live data (default) or historical"),
+    run_id: str | None = Query(
+        None, description="Specific run ID, or latest if not specified"
+    ),
+) -> dict[str, Any]:
+    """Get relation graph data.
+
+    By default, returns live accumulated graph from the production pipeline.
+    Use live=false or specify run_id to access historical script-based runs.
+    """
+    # Try live data first
+    live_path = LIVE_DIR / "graph.json"
+    if live and run_id is None and live_path.exists():
+        graph = load_json_file(live_path)
+        return {
+            "source": "live",
+            "data": graph,
+        }
+
+    # Fall back to historical runs
+    run_path = get_run_path("05_4_build_relation_graph", run_id)
+    graph = load_json_file(run_path / "relation_graph.json")
+
+    return {
+        "source": "historical",
+        "run_id": run_path.name,
+        "data": graph,
+    }
+
+
+@router.get("/runs")
+async def list_runs() -> dict[str, Any]:
+    """List all pipeline runs organized by output type."""
+    runs: dict[str, list[dict]] = {}
+
+    output_dirs = [
+        "01_fetch_events",
+        "02_prepare_nlp_data",
+        "03_3_normalize_entities",
+        "05_4_build_relation_graph",
+        "06_3_export_opportunities",
+    ]
+
+    for output_name in output_dirs:
+        output_dir = DATA_DIR / output_name
+        if not output_dir.exists():
+            continue
+
+        output_runs = []
+        for run_dir in sorted(output_dir.iterdir(), reverse=True)[:10]:
+            if not run_dir.is_dir() or not run_dir.name[0].isdigit():
+                continue
+
+            summary_path = run_dir / "summary.json"
+            summary = None
+            if summary_path.exists():
+                try:
+                    summary = json.loads(summary_path.read_text())
+                except json.JSONDecodeError:
+                    pass
+
+            output_runs.append(
+                {
+                    "run_id": run_dir.name,
+                    "path": str(run_dir),
+                    "summary": summary,
+                }
+            )
+
+        if output_runs:
+            runs[output_name] = output_runs
+
+    return {"runs": runs}
+
+
+@router.get("/summary/{output_name}")
+async def get_summary(
+    output_name: str,
+    run_id: str | None = Query(
+        None, description="Specific run ID, or latest if not specified"
+    ),
+) -> dict[str, Any]:
+    """Get summary.json for a specific output."""
+    run_path = get_run_path(output_name, run_id)
+    summary = load_json_file(run_path / "summary.json")
+
+    return {
+        "run_id": run_path.name,
+        "output": output_name,
+        "data": summary,
+    }
