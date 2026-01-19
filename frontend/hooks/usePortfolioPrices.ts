@@ -255,6 +255,11 @@ export function usePortfolioPrices(
               const changed = data.changed as Portfolio[]
               const newTierChanges = data.tier_changes as TierChange[]
 
+              // Update summary if provided (for real-time stats)
+              if (data.summary) {
+                setSummary(data.summary)
+              }
+
               if (changed.length > 0) {
                 // Track changes for flash effect
                 const newChangedIds = new Set<string>()

@@ -153,7 +153,7 @@ export default function TerminalPage() {
       )
     })
 
-    // Sort function
+    // Sort function with stable secondary key (pair_id) to prevent jumping
     const sortFn = (a: Portfolio, b: Portfolio) => {
       let aVal: number, bVal: number
       switch (sortField) {
@@ -174,7 +174,10 @@ export default function TerminalPage() {
           aVal = a.viability_score ?? -1
           bVal = b.viability_score ?? -1
       }
-      return sortDirection === 'asc' ? aVal - bVal : bVal - aVal
+      const primaryCompare = sortDirection === 'asc' ? aVal - bVal : bVal - aVal
+      // Use pair_id as tie-breaker for stable sorting
+      if (primaryCompare !== 0) return primaryCompare
+      return a.pair_id.localeCompare(b.pair_id)
     }
 
     // Separate favorites and non-favorites, sort each, then combine
@@ -226,9 +229,34 @@ export default function TerminalPage() {
     { enabled: !showHelp, searchInputRef }
   )
 
-  // Use global stats if available, fallback to summary
-  const totalCount = stats.total || summary?.total || 0
-  const profitableCount = stats.profitable || summary?.profitable_count || 0
+  // Calculate stats from WebSocket summary (real-time) with REST fallback
+  // WebSocket summary now includes by_tier breakdown for accurate tier-specific counts
+  const totalCount = useMemo(() => {
+    // Prefer WebSocket summary for tier 1 count (real-time updates)
+    if (connected && summary?.by_tier?.tier_1 !== undefined) {
+      return summary.by_tier.tier_1
+    }
+    // Fall back to REST stats
+    return stats.total || summary?.total || 0
+  }, [connected, summary?.by_tier?.tier_1, summary?.total, stats.total])
+
+  const profitableCount = useMemo(() => {
+    // Count profitable tier 1 portfolios from current data
+    // The portfolios array contains tier 1 portfolios (maxTier=1 filter)
+    if (connected && portfolios.length > 0) {
+      // Count profitable from the current portfolio list
+      // Note: when profitableOnly=false, portfolios contains all tier 1 portfolios
+      // when profitableOnly=true, portfolios only contains profitable ones
+      if (!profitableOnly) {
+        // Full list - count profitable directly
+        return portfolios.filter(p => p.expected_profit > 0.001).length
+      }
+      // If profitableOnly is true, we need the total profitable count
+      // Use REST stats as fallback since we don't have the full list
+      return stats.profitable || portfolios.length
+    }
+    return stats.profitable || summary?.profitable_count || 0
+  }, [connected, portfolios, profitableOnly, stats.profitable, summary?.profitable_count])
 
   return (
     <>

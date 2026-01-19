@@ -97,6 +97,7 @@ class PortfolioConnectionManager:
                                 "changed": filtered_changed,
                                 "tier_changes": tier_changes,
                                 "changed_count": len(filtered_changed),
+                                "summary": portfolio_service.get_summary(),
                             }
                         )
 
