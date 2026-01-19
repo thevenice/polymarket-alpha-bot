@@ -14,6 +14,90 @@ interface PriceChange {
   direction: 'up' | 'down' | 'changed' | null
 }
 
+interface ColumnHint {
+  title: string
+  beginner: string
+  pro: string
+}
+
+// =============================================================================
+// COLUMN HINTS - Educational tooltips for each column
+// =============================================================================
+
+const COLUMN_HINTS: Record<string, ColumnHint> = {
+  favorite: {
+    title: 'Watchlist',
+    beginner: 'Click the star to track strategies you want to monitor. Pinned items stay at the top.',
+    pro: 'Persisted to localStorage. Sorted by coverage within pinned group.',
+  },
+  target: {
+    title: 'Target Bet',
+    beginner: 'The primary position you\'re betting on. This is the outcome you expect to win.',
+    pro: 'Higher probability event in the covered pair. Price shown is current ask.',
+  },
+  backup: {
+    title: 'Backup Bet',
+    beginner: 'Your hedge position. If target loses, this one wins — guaranteeing you get $1 back.',
+    pro: 'Covers the target\'s failure case. Combined cost < $1 = arbitrage opportunity.',
+  },
+  confidence: {
+    title: 'LLM Confidence',
+    beginner: 'AI-assessed probability that this strategy is logically valid (events truly cover all outcomes).',
+    pro: 'Primary sort key. Higher = more likely the coverage logic is sound. 80%+ is high confidence.',
+  },
+  cost: {
+    title: 'Total Cost',
+    beginner: 'How much you need to invest to buy both positions. Lower is better.',
+    pro: 'Sum of target + backup prices. Cost < $1.00 means guaranteed profit potential.',
+  },
+  return: {
+    title: 'Expected Return',
+    beginner: 'Your profit if the strategy works: (Payout - Cost) / Cost. Green = profit!',
+    pro: 'Secondary sort key. Formula: (1 - total_cost) / total_cost × 100%.',
+  },
+}
+
+// =============================================================================
+// COLUMN HINT COMPONENT
+// =============================================================================
+
+function InfoIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <circle cx="8" cy="8" r="6.5" />
+      <path d="M8 7v4" strokeLinecap="round" />
+      <circle cx="8" cy="5" r="0.5" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+function ColumnHintIcon({
+  hint,
+  position = 'center'
+}: {
+  hint: ColumnHint
+  position?: 'left' | 'center' | 'right'
+}) {
+  const positionClass = position === 'left'
+    ? 'column-hint-tooltip--left'
+    : position === 'right'
+      ? 'column-hint-tooltip--right'
+      : ''
+
+  return (
+    <span className="column-hint">
+      <span className="column-hint-icon">
+        <InfoIcon />
+      </span>
+      <span className={`column-hint-tooltip ${positionClass}`}>
+        <span className="column-hint-title">{hint.title}</span>
+        <span className="column-hint-text">{hint.beginner}</span>
+        <span className="column-hint-pro">{hint.pro}</span>
+      </span>
+    </span>
+  )
+}
+
 interface PortfolioTableProps {
   portfolios: Portfolio[]
   density: Density
@@ -108,41 +192,41 @@ export function PortfolioTable({
           <table className="w-full table-fixed">
             <thead className="bg-surface-elevated border-b border-border sticky top-0 z-10">
               <tr>
-                <th
-                  className={`${styles.headerPadding} text-left text-[10px] font-medium uppercase tracking-wider text-text-muted w-10`}
-                  title="Watch this strategy"
-                >
-                  ★
+                <th className={`${styles.headerPadding} text-left text-[10px] font-medium uppercase tracking-wider text-text-muted w-10`}>
+                  <span className="flex items-center gap-1">
+                    ★
+                    <ColumnHintIcon hint={COLUMN_HINTS.favorite} position="left" />
+                  </span>
                 </th>
-                <th
-                  className={`${styles.headerPadding} text-left text-[10px] font-medium uppercase tracking-wider text-text-muted w-[28%]`}
-                  title="The main bet"
-                >
-                  Target Bet
+                <th className={`${styles.headerPadding} text-left text-[10px] font-medium uppercase tracking-wider text-text-muted w-[28%]`}>
+                  <span className="flex items-center gap-1">
+                    Target Bet
+                    <ColumnHintIcon hint={COLUMN_HINTS.target} position="left" />
+                  </span>
                 </th>
-                <th
-                  className={`${styles.headerPadding} text-left text-[10px] font-medium uppercase tracking-wider text-text-muted w-[28%]`}
-                  title="The backup bet"
-                >
-                  Backup Bet
+                <th className={`${styles.headerPadding} text-left text-[10px] font-medium uppercase tracking-wider text-text-muted w-[28%]`}>
+                  <span className="flex items-center gap-1">
+                    Backup Bet
+                    <ColumnHintIcon hint={COLUMN_HINTS.backup} />
+                  </span>
                 </th>
-                <th
-                  className={`${styles.headerPadding} text-left text-[10px] font-medium uppercase tracking-wider text-text-muted w-20`}
-                  title="LLM validation confidence (primary sort)"
-                >
-                  LLM Conf.
+                <th className={`${styles.headerPadding} text-left text-[10px] font-medium uppercase tracking-wider text-text-muted w-20`}>
+                  <span className="flex items-center gap-1">
+                    LLM Conf.
+                    <ColumnHintIcon hint={COLUMN_HINTS.confidence} />
+                  </span>
                 </th>
-                <th
-                  className={`${styles.headerPadding} text-left text-[10px] font-medium uppercase tracking-wider text-text-muted w-16`}
-                  title="Total investment"
-                >
-                  Cost
+                <th className={`${styles.headerPadding} text-left text-[10px] font-medium uppercase tracking-wider text-text-muted w-16`}>
+                  <span className="flex items-center gap-1">
+                    Cost
+                    <ColumnHintIcon hint={COLUMN_HINTS.cost} />
+                  </span>
                 </th>
-                <th
-                  className={`${styles.headerPadding} text-left text-[10px] font-medium uppercase tracking-wider text-text-muted w-16`}
-                  title="Expected return (secondary sort)"
-                >
-                  Return
+                <th className={`${styles.headerPadding} text-left text-[10px] font-medium uppercase tracking-wider text-text-muted w-16`}>
+                  <span className="flex items-center gap-1">
+                    Return
+                    <ColumnHintIcon hint={COLUMN_HINTS.return} position="right" />
+                  </span>
                 </th>
               </tr>
             </thead>

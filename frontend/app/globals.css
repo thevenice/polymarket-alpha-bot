@@ -236,3 +236,113 @@ input[type="search"]:focus {
 input::placeholder {
   color: rgb(var(--color-text-muted));
 }
+
+/* --------------------------------------------------------------------------
+   Column Hint Tooltips
+   -------------------------------------------------------------------------- */
+.column-hint {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.column-hint-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.4;
+  cursor: help;
+  transition: opacity 0.15s ease;
+}
+
+.column-hint-icon svg {
+  width: 11px;
+  height: 11px;
+}
+
+.column-hint:hover .column-hint-icon {
+  opacity: 1;
+}
+
+.column-hint-tooltip {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  pointer-events: none;
+
+  /* Hidden by default */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(4px);
+  transition: all 0.15s ease;
+
+  /* Tooltip styling */
+  width: max-content;
+  max-width: 200px;
+  padding: 8px 10px;
+  background: rgb(22 24 30);
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.column-hint:hover .column-hint-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.column-hint-title {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgb(var(--color-text-primary));
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.column-hint-text {
+  display: block;
+  font-size: 11px;
+  line-height: 1.45;
+  color: rgb(var(--color-text-secondary));
+}
+
+.column-hint-pro {
+  display: block;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgb(var(--color-border));
+  font-size: 10px;
+  line-height: 1.4;
+  color: rgb(var(--color-text-muted));
+}
+
+.column-hint-pro::before {
+  content: 'Pro: ';
+  color: rgb(var(--color-cyan));
+  font-weight: 500;
+}
+
+/* Adjust tooltip position for edge columns */
+.column-hint-tooltip--left {
+  left: -4px;
+  transform: translateX(0) translateY(4px);
+}
+
+.column-hint:hover .column-hint-tooltip--left {
+  transform: translateX(0) translateY(0);
+}
+
+.column-hint-tooltip--right {
+  left: auto;
+  right: -4px;
+  transform: translateX(0) translateY(4px);
+}
+
+.column-hint:hover .column-hint-tooltip--right {
+  transform: translateX(0) translateY(0);
+}
