@@ -59,7 +59,7 @@ export default function PipelinePage() {
     // Don't reset runningPipeline here - let status.running control it
   }
 
-  const isRunning = runningPipeline || status?.running
+  const isRunning = runningPipeline || status?.running || false
   const stepProgress = status?.step_progress
   const completedSteps = stepProgress?.completed_count || 0
   const totalSteps = stepProgress?.total_steps || 8
@@ -122,9 +122,11 @@ export default function PipelinePage() {
                 <p>Result: <span className="text-emerald capitalize">{status.production.last_run.status}</span></p>
                 <p>Total events analyzed: {status.production.last_run.events_processed}</p>
                 <p>New events found: {status.production.last_run.new_events}</p>
-                <p className="text-text-muted/70">
-                  {new Date(status.production.last_run.completed_at).toLocaleString()}
-                </p>
+                {status.production.last_run.completed_at && (
+                  <p className="text-text-muted/70">
+                    {new Date(status.production.last_run.completed_at).toLocaleString()}
+                  </p>
+                )}
               </div>
               <p className="text-xs text-text-muted mt-3">
                 (Progress details reset on server restart)

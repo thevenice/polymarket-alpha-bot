@@ -36,7 +36,7 @@ export function PriceProvider({ children }: { children: ReactNode }) {
   // Refs to track lifecycle and prevent stale closures
   const mountedRef = useRef(true)
   const wsRef = useRef<WebSocket | null>(null)
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>()
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   const connect = useCallback(() => {
     // Don't connect if unmounted

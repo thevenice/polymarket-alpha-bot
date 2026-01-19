@@ -111,9 +111,9 @@ export function usePortfolioPrices(
 
   const wsRef = useRef<WebSocket | null>(null)
   const filtersRef = useRef<FilterState>(initialFilters)
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>()
-  const wsTimeoutRef = useRef<NodeJS.Timeout>()  // Timeout for WS connection
-  const pollingIntervalRef = useRef<NodeJS.Timeout>()
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const wsTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)  // Timeout for WS connection
+  const pollingIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const portfolioMapRef = useRef<Map<string, Portfolio>>(new Map())
   const mountedRef = useRef(true)  // Track if component is mounted
   const wsFailedRef = useRef(false)  // Track if WS has failed (use polling instead)

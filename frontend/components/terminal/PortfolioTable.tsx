@@ -10,9 +10,6 @@ import { densityStyles, Density } from '@/components/terminal/DensityToggle'
 // TYPES
 // =============================================================================
 
-type SortField = 'viability_score' | 'expected_profit' | 'total_cost'
-type SortDirection = 'asc' | 'desc'
-
 interface PriceChange {
   direction: 'up' | 'down' | 'changed' | null
 }
@@ -20,15 +17,12 @@ interface PriceChange {
 interface PortfolioTableProps {
   portfolios: Portfolio[]
   density: Density
-  sortField: SortField
-  sortDirection: SortDirection
   selectedIndex: number
   changedIds: Set<string>
   priceChanges: Map<string, PriceChange>
   pinnedCount: number
   connected: boolean
   isFavorite: (pairId: string) => boolean
-  onSort: (field: SortField) => void
   onSelect: (index: number, portfolio: Portfolio) => void
   onToggleFavorite: (pairId: string, coverage: number) => void
 }
@@ -40,15 +34,12 @@ interface PortfolioTableProps {
 export function PortfolioTable({
   portfolios,
   density,
-  sortField,
-  sortDirection,
   selectedIndex,
   changedIds,
   priceChanges,
   pinnedCount,
   connected,
   isFavorite,
-  onSort,
   onSelect,
   onToggleFavorite,
 }: PortfolioTableProps) {
@@ -88,31 +79,6 @@ export function PortfolioTable({
       }
     }
   }, [selectedIndex])
-
-  const SortHeader = ({
-    field,
-    label,
-    hint,
-    className = '',
-  }: {
-    field: SortField
-    label: string
-    hint: string
-    className?: string
-  }) => (
-    <th
-      className={`${styles.headerPadding} text-left text-[10px] font-medium uppercase tracking-wider text-text-muted cursor-pointer hover:text-text-secondary transition-colors ${className}`}
-      onClick={() => onSort(field)}
-      title={hint}
-    >
-      <div className="flex items-center gap-1">
-        {label}
-        {sortField === field && (
-          <span className={`text-cyan ${sortDirection === 'desc' ? 'rotate-180' : ''}`}>↑</span>
-        )}
-      </div>
-    </th>
-  )
 
   return (
     <div className="flex flex-col flex-1 min-h-0 rounded-lg border border-border overflow-hidden bg-surface">
@@ -160,24 +126,24 @@ export function PortfolioTable({
                 >
                   Backup Bet
                 </th>
-                <SortHeader
-                  field="viability_score"
-                  label="LLM Conf."
-                  hint="LLM validation confidence (set once, stable)"
-                  className="w-20"
-                />
-                <SortHeader
-                  field="total_cost"
-                  label="Cost"
-                  hint="Total investment"
-                  className="w-16"
-                />
-                <SortHeader
-                  field="expected_profit"
-                  label="Return"
-                  hint="Expected return"
-                  className="w-16"
-                />
+                <th
+                  className={`${styles.headerPadding} text-left text-[10px] font-medium uppercase tracking-wider text-text-muted w-20`}
+                  title="LLM validation confidence (primary sort)"
+                >
+                  LLM Conf.
+                </th>
+                <th
+                  className={`${styles.headerPadding} text-left text-[10px] font-medium uppercase tracking-wider text-text-muted w-16`}
+                  title="Total investment"
+                >
+                  Cost
+                </th>
+                <th
+                  className={`${styles.headerPadding} text-left text-[10px] font-medium uppercase tracking-wider text-text-muted w-16`}
+                  title="Expected return (secondary sort)"
+                >
+                  Return
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -315,4 +281,4 @@ export function PortfolioTable({
 }
 
 // Re-export types for consumers
-export type { SortField, SortDirection, PriceChange }
+export type { PriceChange }

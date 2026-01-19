@@ -9,7 +9,7 @@ import { PipelineDropdown } from '@/components/terminal/PipelineDropdown'
 import { KeyboardShortcutsHelp } from '@/components/terminal/KeyboardShortcutsHelp'
 import { DensityToggle, useDensity } from '@/components/terminal/DensityToggle'
 import { ExportDropdown } from '@/components/terminal/ExportDropdown'
-import { PortfolioTable, SortField, SortDirection } from '@/components/terminal/PortfolioTable'
+import { PortfolioTable } from '@/components/terminal/PortfolioTable'
 import { getApiBaseUrl } from '@/config/api-config'
 
 // =============================================================================
@@ -52,8 +52,6 @@ export default function TerminalPage() {
 
   // Local UI state
   const [profitableOnly, setProfitableOnly] = useState(false)
-  const [sortField, setSortField] = useState<SortField>('viability_score')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [selectedPortfolio, setSelectedPortfolio] = useState<Portfolio | null>(null)
   const [filter, setFilter] = useState('')
 
@@ -127,19 +125,6 @@ export default function TerminalPage() {
     })
   }, [profitableOnly, updateFilters])
 
-  // Handle sort
-  const handleSort = useCallback(
-    (field: SortField) => {
-      if (sortField === field) {
-        setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'))
-      } else {
-        setSortField(field)
-        setSortDirection('desc')
-      }
-    },
-    [sortField]
-  )
-
   // Filter and sort portfolios (favorites pinned to top)
   const sortedPortfolios = useMemo(() => {
     const filtered = [...portfolios].filter((p) => {
@@ -153,39 +138,33 @@ export default function TerminalPage() {
       )
     })
 
-    // Sort function with stable secondary key (pair_id) to prevent jumping
+    // Multi-field sort: viability_score (desc), then expected_profit (desc)
+    // This keeps portfolios stable within each LLM confidence tier while
+    // allowing profitability ordering to update as prices change
     const sortFn = (a: Portfolio, b: Portfolio) => {
-      let aVal: number, bVal: number
-      switch (sortField) {
-        case 'viability_score':
-          // Put undefined values at the end
-          aVal = a.viability_score ?? -1
-          bVal = b.viability_score ?? -1
-          break
-        case 'expected_profit':
-          aVal = a.expected_profit
-          bVal = b.expected_profit
-          break
-        case 'total_cost':
-          aVal = a.total_cost
-          bVal = b.total_cost
-          break
-        default:
-          aVal = a.viability_score ?? -1
-          bVal = b.viability_score ?? -1
+      // Primary sort: viability_score descending (undefined values at end)
+      const aScore = a.viability_score ?? -1
+      const bScore = b.viability_score ?? -1
+      if (aScore !== bScore) {
+        return bScore - aScore // descending
       }
-      const primaryCompare = sortDirection === 'asc' ? aVal - bVal : bVal - aVal
-      // Use pair_id as tie-breaker for stable sorting
-      if (primaryCompare !== 0) return primaryCompare
+
+      // Secondary sort: expected_profit descending
+      if (a.expected_profit !== b.expected_profit) {
+        return b.expected_profit - a.expected_profit // descending
+      }
+
+      // Tie-breaker: pair_id for stable sorting
       return a.pair_id.localeCompare(b.pair_id)
     }
 
     // Separate favorites and non-favorites, sort each, then combine
+    // Favorites always appear at the top, maintaining sort order within each group
     const favorites = filtered.filter((p) => isFavorite(p.pair_id)).sort(sortFn)
     const nonFavorites = filtered.filter((p) => !isFavorite(p.pair_id)).sort(sortFn)
 
     return [...favorites, ...nonFavorites]
-  }, [portfolios, filter, sortField, sortDirection, isFavorite])
+  }, [portfolios, filter, isFavorite])
 
   // Count of pinned favorites in current view
   const pinnedCount = useMemo(() => {
@@ -384,15 +363,12 @@ export default function TerminalPage() {
           <PortfolioTable
             portfolios={sortedPortfolios}
             density={density}
-            sortField={sortField}
-            sortDirection={sortDirection}
             selectedIndex={selectedIndex}
             changedIds={changedIds}
             priceChanges={priceChanges}
             pinnedCount={pinnedCount}
             connected={connected}
             isFavorite={isFavorite}
-            onSort={handleSort}
             onSelect={(index, portfolio) => {
               setSelectedIndex(index)
               setSelectedPortfolio(portfolio)
