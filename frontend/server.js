@@ -41,17 +41,14 @@ app.prepare().then(() => {
   // Handle WebSocket upgrade requests
   server.on('upgrade', (req, socket, head) => {
     const { pathname } = parse(req.url)
-    const socketId = Math.random().toString(36).substring(7)
 
-    console.log(`WebSocket upgrade request: ${pathname}, socketId=${socketId}, remotePort=${socket.remotePort}`)
-
+    // Only proxy our API WebSockets (/ws/*)
+    // Let Next.js handle its own WebSockets (/_next/webpack-hmr for HMR)
     if (pathname?.startsWith('/ws')) {
-      console.log(`WebSocket upgrade: ${pathname} (socketId=${socketId})`)
+      console.log(`WebSocket upgrade: ${pathname}`)
       wsProxy.upgrade(req, socket, head)
-    } else {
-      console.log(`Destroying non-WS socket: ${pathname} (socketId=${socketId})`)
-      socket.destroy()
     }
+    // Don't destroy other sockets - Next.js needs them for HMR
   })
 
   server.listen(port, () => {

@@ -117,8 +117,17 @@ export default function TerminalPage() {
     return () => clearInterval(interval)
   }, [fetchData])
 
+  // Track if this is the initial mount to avoid duplicate fetch
+  // (WebSocket already sends 'initial' with default filters on connect)
+  const isInitialMount = useRef(true)
+
   // Update WebSocket filters when UI filters change
+  // Skip on initial mount - WebSocket 'initial' message handles first load
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
     updateFilters({
       maxTier: 1,
       profitableOnly,

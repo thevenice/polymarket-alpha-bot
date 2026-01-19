@@ -117,8 +117,16 @@ export function usePortfolioPrices(
   const portfolioMapRef = useRef<Map<string, Portfolio>>(new Map())
   const mountedRef = useRef(true)  // Track if component is mounted
   const wsFailedRef = useRef(false)  // Track if WS has failed (use polling instead)
+  const statusRef = useRef<ConnectionStatus>(status)  // Ref for stable callback identity
+
+  // Keep statusRef in sync with status state
+  useEffect(() => {
+    statusRef.current = status
+  }, [status])
 
   // REST API fallback for when WebSocket fails
+  // NOTE: Uses statusRef for stable callback identity - prevents cascading re-renders
+  // that were causing the table to reload unnecessarily when connection status changed
   const fetchViaRest = useCallback(async () => {
     if (!mountedRef.current) return
 
@@ -143,13 +151,13 @@ export function usePortfolioPrices(
       if (data.summary) setSummary(data.summary)
 
       // Mark as connected (via polling)
-      if (status !== 'connected') {
+      if (statusRef.current !== 'connected') {
         setStatus('connected')
       }
     } catch (e) {
       console.error('REST fetch failed:', e)
     }
-  }, [status])
+  }, [])  // No dependencies - uses refs for stable identity
 
   // Start polling when WebSocket fails
   const startPolling = useCallback(() => {
@@ -225,15 +233,21 @@ export function usePortfolioPrices(
       wsRef.current = ws
 
       ws.onopen = () => {
-        console.log('Portfolio WebSocket connected, mounted:', mountedRef.current)
         if (!mountedRef.current) {
-          console.log('Component unmounted, closing WS')
           ws.close()
           return
         }
         setStatus('connected')
         wsFailedRef.current = false
         stopPolling()  // Stop polling if WS connects
+
+        // Send initial filters immediately so server uses correct filters for 'initial' message
+        const filters = filtersRef.current
+        ws.send(JSON.stringify({
+          type: 'filter',
+          max_tier: filters.maxTier,
+          profitable_only: filters.profitableOnly,
+        }))
       }
 
       ws.onmessage = (event) => {
@@ -322,7 +336,6 @@ export function usePortfolioPrices(
 
             case 'full_reload':
               // Server signaling data was reset/changed, replace all portfolios
-              console.log('Portfolio data reloaded from server')
               const reloadedPortfolios = data.portfolios as Portfolio[]
               portfolioMapRef.current = new Map(
                 reloadedPortfolios.map(p => [p.pair_id, p])
@@ -349,8 +362,6 @@ export function usePortfolioPrices(
         if (wsRef.current !== ws) {
           return
         }
-
-        console.log('Portfolio WebSocket disconnected')
         wsRef.current = null
 
         // If WS has failed before, use polling instead of reconnecting
@@ -405,7 +416,6 @@ export function usePortfolioPrices(
 
   // Initial connection - only run once on mount
   useEffect(() => {
-    console.log('usePortfolioPrices: mounting')
     mountedRef.current = true
     wsFailedRef.current = false
 
@@ -414,7 +424,6 @@ export function usePortfolioPrices(
 
     // Cleanup
     return () => {
-      console.log('usePortfolioPrices: cleanup')
       mountedRef.current = false
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current)
       if (wsTimeoutRef.current) clearTimeout(wsTimeoutRef.current)
@@ -434,19 +443,21 @@ export function usePortfolioPrices(
   }, [])
 
   // Send filter updates to server
+  // Only fetch via REST if WebSocket is not connected, otherwise use WS
+  // This prevents double portfolio replacement (REST + filter_ack)
   const updateFilters = useCallback((filters: FilterState) => {
     filtersRef.current = filters
 
-    // Always fetch via REST immediately for responsive UI
-    fetchViaRest()
-
-    // Also send via WebSocket if connected (for real-time updates)
+    // If WebSocket is connected, use it (will get filter_ack with portfolios)
+    // Otherwise fall back to REST
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
         type: 'filter',
         max_tier: filters.maxTier,
         profitable_only: filters.profitableOnly,
       }))
+    } else {
+      fetchViaRest()
     }
   }, [fetchViaRest])
 

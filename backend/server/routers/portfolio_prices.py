@@ -256,7 +256,27 @@ async def portfolio_websocket(websocket: WebSocket):
             }
         )
 
-        # Load portfolios and send initial data
+        # Wait briefly for client's initial filter message before sending initial data
+        # This allows client to specify filters before we send portfolios
+        try:
+            first_msg = await asyncio.wait_for(
+                websocket.receive_json(),
+                timeout=0.5,  # Short timeout - client should send immediately
+            )
+            if first_msg.get("type") == "filter":
+                state.max_tier = first_msg.get("max_tier", state.max_tier)
+                state.profitable_only = first_msg.get(
+                    "profitable_only", state.profitable_only
+                )
+                manager.update_filters(websocket, state.max_tier, state.profitable_only)
+                logger.debug(
+                    f"Client filters received before initial: max_tier={state.max_tier}, profitable_only={state.profitable_only}"
+                )
+        except asyncio.TimeoutError:
+            # No filter message received, use defaults
+            logger.debug("No initial filter message, using defaults")
+
+        # Load portfolios and send initial data (with client's filters if provided)
         summary = portfolio_service.get_summary()
         initial_portfolios = portfolio_service.get_portfolios(
             max_tier=state.max_tier,
