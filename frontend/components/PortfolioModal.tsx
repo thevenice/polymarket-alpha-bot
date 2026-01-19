@@ -126,34 +126,18 @@ export function PortfolioModal({ portfolio: p, onClose }: PortfolioModalProps) {
           {/* AI Analysis */}
           {p.validation_analysis && (
             <div className="bg-surface-elevated/50 rounded-lg p-3.5 border border-border">
-              <div className="flex items-center gap-2 mb-1">
-                <h4 className="text-[10px] font-medium text-violet-400 uppercase tracking-wide">AI Analysis</h4>
-                {p.viability_score !== undefined && (
-                  <span className="text-[10px] font-mono text-text-muted">
-                    {(p.viability_score * 100).toFixed(0)}% confidence
-                  </span>
-                )}
-              </div>
+              <h4 className="text-[10px] font-medium text-violet-400 uppercase tracking-wide mb-1">AI Analysis</h4>
               <p className="text-xs text-text-secondary leading-relaxed">{p.validation_analysis}</p>
             </div>
           )}
 
           {/* Key Metrics - Compact row */}
           <div className="grid grid-cols-3 gap-2">
-            <div className="bg-surface-elevated rounded-lg p-2.5 text-center group/conf relative">
+            <div className="bg-surface-elevated rounded-lg p-2.5 text-center">
               <p className={`text-base font-mono font-semibold ${p.viability_score !== undefined ? (p.viability_score >= 0.8 ? 'text-emerald' : p.viability_score >= 0.6 ? 'text-cyan' : 'text-text-secondary') : 'text-text-muted'}`}>
                 {p.viability_score !== undefined ? `${(p.viability_score * 100).toFixed(0)}%` : '—'}
               </p>
-              <p className="text-[9px] text-text-muted uppercase tracking-wide mt-0.5 flex items-center justify-center gap-0.5">
-                LLM Conf.
-                <span className="w-3 h-3 rounded-full bg-surface border border-border text-[7px] flex items-center justify-center opacity-50 group-hover/conf:opacity-100 transition-opacity cursor-help">?</span>
-              </p>
-              {/* Tooltip */}
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-2 bg-surface border border-border rounded-lg shadow-lg opacity-0 invisible group-hover/conf:opacity-100 group-hover/conf:visible transition-all z-50 text-left pointer-events-none">
-                <p className="text-[10px] font-medium text-violet-400 mb-1">LLM Validation Confidence</p>
-                <p className="text-[9px] text-text-secondary mb-1.5">How confident the LLM is that this hedge relationship is logically sound.</p>
-                <p className="text-[9px] text-text-muted">Assigned once during validation, never changes.</p>
-              </div>
+              <p className="text-[9px] text-text-muted uppercase tracking-wide mt-0.5">LLM Conf.</p>
             </div>
             <div className="bg-surface-elevated rounded-lg p-2.5 text-center">
               <p className="text-base font-mono font-semibold text-text-primary">
