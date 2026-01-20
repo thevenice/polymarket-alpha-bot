@@ -11,7 +11,7 @@ from loguru import logger
 
 from server import __version__
 from server.price_aggregation import price_aggregation
-from server.routers import data, pipeline, prices, wallet
+from server.routers import data, pipeline, prices, wallet, trading
 from core.market_poller import market_poller
 
 
@@ -52,6 +52,7 @@ app.include_router(data.router, prefix="/data", tags=["data"])
 app.include_router(prices.router, prefix="/prices", tags=["prices"])
 app.include_router(pipeline.router, prefix="/pipeline", tags=["pipeline"])
 app.include_router(wallet.router, prefix="/wallet", tags=["wallet"])
+app.include_router(trading.router, prefix="/trading", tags=["trading"])
 
 # Portfolio real-time updates
 from server.routers import portfolio_prices
