@@ -59,7 +59,7 @@ class TradingExecutor:
 
     async def get_market_info(self, market_id: str) -> MarketInfo:
         """Fetch market info from Polymarket API."""
-        async with httpx.AsyncClient(timeout=10.0) as http:
+        async with httpx.AsyncClient(timeout=30.0) as http:
             resp = await http.get(
                 f"https://gamma-api.polymarket.com/markets/{market_id}"
             )
