@@ -1,7 +1,7 @@
 # Alphapoly Development Commands
 # ================================
 
-.PHONY: help install dev backend frontend pipeline pipeline-full lint clean check-node export-seed import-seed
+.PHONY: help install dev stop backend frontend pipeline pipeline-full lint clean check-node export-seed import-seed
 
 # Node.js detection - supports fnm, nvm, volta, and system node
 # Searches common installation paths and adds to PATH
@@ -22,6 +22,7 @@ help:
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev         Start backend + frontend servers"
+	@echo "  make stop        Stop all dev servers"
 	@echo "  make backend     Start backend API only (localhost:8000)"
 	@echo "  make frontend    Start frontend only (localhost:3000)"
 	@echo ""
@@ -65,6 +66,11 @@ install: check-node
 dev:
 	@echo "Starting backend (8000) and frontend (3000)..."
 	@make -j2 backend frontend
+
+stop:
+	@echo "Stopping dev servers..."
+	@fuser -k 8000/tcp 3000/tcp 2>/dev/null || true
+	@echo "Servers stopped"
 
 backend:
 	cd backend && uv run python -m uvicorn server.main:app --reload --port 8000
