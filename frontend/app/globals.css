@@ -358,3 +358,116 @@ input::placeholder {
 .column-hint:hover .column-hint-tooltip--top {
   transform: translateX(0) translateY(0);
 }
+
+/* --------------------------------------------------------------------------
+   Purchase Flow Hint (Positions page)
+   -------------------------------------------------------------------------- */
+.purchase-flow-hint {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.purchase-flow-hint-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+  cursor: help;
+  transition: opacity 0.15s ease;
+  color: rgb(var(--color-cyan));
+}
+
+.purchase-flow-hint:hover .purchase-flow-hint-icon {
+  opacity: 1;
+}
+
+.purchase-flow-hint-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  pointer-events: none;
+
+  /* Hidden by default */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition: all 0.15s ease;
+
+  /* Tooltip styling - wider for the flow */
+  width: 320px;
+  padding: 12px 14px;
+  background: rgb(22 24 30);
+  border: 1px solid rgb(var(--color-border));
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  text-align: left;
+}
+
+.purchase-flow-hint:hover .purchase-flow-hint-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.purchase-flow-hint-title {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(var(--color-cyan));
+  margin-bottom: 10px;
+}
+
+.purchase-flow-hint-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.purchase-flow-hint-step {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 11px;
+  line-height: 1.4;
+  color: rgb(var(--color-text-secondary));
+}
+
+.purchase-flow-hint-num {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(var(--color-surface-hover));
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgb(var(--color-text-muted));
+}
+
+.purchase-flow-hint-step strong {
+  color: rgb(var(--color-text-primary));
+  font-weight: 500;
+}
+
+.purchase-flow-hint-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgb(var(--color-border));
+  font-size: 10px;
+  line-height: 1.4;
+  color: rgb(var(--color-text-muted));
+}
+
+.purchase-flow-hint-label-title {
+  font-weight: 500;
+  color: rgb(var(--color-text-secondary));
+  margin-bottom: 2px;
+}

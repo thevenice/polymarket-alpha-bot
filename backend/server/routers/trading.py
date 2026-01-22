@@ -96,6 +96,85 @@ async def buy_pair(req: BuyPairRequest):
                 "You now hold both YES and NO tokens. Sell unwanted side manually on Polymarket."
             )
 
+        # Record position entry for tracking
+        logger.info(
+            f"Trade result.success={result.success}, attempting position recording"
+        )
+        if result.success:
+            try:
+                from datetime import datetime
+                from uuid import uuid4
+                import traceback
+                from core.positions.storage import PositionStorage, PositionEntry
+
+                logger.debug("Fetching market info for position recording...")
+
+                # Get market info for token IDs
+                target_market = await executor.get_market_info(req.target_market_id)
+                cover_market = await executor.get_market_info(req.cover_market_id)
+
+                logger.debug(f"Target market: {target_market.question[:50]}...")
+                logger.debug(f"Cover market: {cover_market.question[:50]}...")
+
+                # Determine which token ID we're holding (the wanted side)
+                target_token_id = (
+                    target_market.yes_token_id
+                    if req.target_position == "YES"
+                    else (target_market.no_token_id or "")
+                )
+                cover_token_id = (
+                    cover_market.yes_token_id
+                    if req.cover_position == "YES"
+                    else (cover_market.no_token_id or "")
+                )
+
+                # Get entry prices
+                target_entry_price = (
+                    target_market.yes_price
+                    if req.target_position == "YES"
+                    else target_market.no_price
+                )
+                cover_entry_price = (
+                    cover_market.yes_price
+                    if req.cover_position == "YES"
+                    else cover_market.no_price
+                )
+
+                entry = PositionEntry(
+                    position_id=str(uuid4()),
+                    pair_id=req.pair_id,
+                    entry_time=datetime.utcnow().isoformat() + "Z",
+                    entry_amount_per_side=req.amount_per_position,
+                    entry_total_cost=req.amount_per_position * 2,
+                    target_market_id=req.target_market_id,
+                    target_position=req.target_position,
+                    target_token_id=target_token_id or "",
+                    target_question=target_market.question,
+                    target_entry_price=target_entry_price,
+                    target_split_tx=result.target.split_tx or "",
+                    target_clob_order_id=result.target.clob_order_id,
+                    target_clob_filled=result.target.clob_filled,
+                    cover_market_id=req.cover_market_id,
+                    cover_position=req.cover_position,
+                    cover_token_id=cover_token_id or "",
+                    cover_question=cover_market.question,
+                    cover_entry_price=cover_entry_price,
+                    cover_split_tx=result.cover.split_tx or "",
+                    cover_clob_order_id=result.cover.clob_order_id,
+                    cover_clob_filled=result.cover.clob_filled,
+                    notes=None,
+                )
+
+                storage = PositionStorage()
+                storage.add(entry)
+                logger.info(
+                    f"Recorded position: {entry.position_id} for pair {req.pair_id}"
+                )
+            except Exception as e:
+                # Don't fail the trade if position recording fails
+                logger.error(f"Failed to record position: {e}")
+                logger.error(traceback.format_exc())
+
         return BuyPairResponse(
             success=result.success,
             pair_id=result.pair_id,

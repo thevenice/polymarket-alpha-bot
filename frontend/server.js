@@ -19,7 +19,11 @@ const wsProxy = createProxyMiddleware({
   pathRewrite: {
     '^/ws': '', // Remove /ws prefix: /ws/portfolios/ws -> /portfolios/ws
   },
-  logger: console,
+  on: {
+    error: (err, req, res) => {
+      console.error(`[Proxy Error] ${err.message}`)
+    },
+  },
 })
 
 app.prepare().then(() => {
