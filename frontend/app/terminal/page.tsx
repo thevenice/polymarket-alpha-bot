@@ -231,13 +231,7 @@ export default function TerminalPage() {
               <div>
                 <h1 className="text-lg font-semibold text-text-primary">Terminal</h1>
                 <p className="text-[10px] text-text-muted">
-                  Unified trading workspace •{' '}
-                  <button
-                    onClick={() => setShowHelp(true)}
-                    className="text-cyan hover:underline"
-                  >
-                    ? shortcuts
-                  </button>
+                  Unified trading workspace
                 </p>
               </div>
 
