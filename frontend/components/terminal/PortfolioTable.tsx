@@ -119,7 +119,7 @@ interface PortfolioTableProps {
 // Row heights for virtualization
 const ROW_HEIGHTS: Record<Density, number> = {
   compact: 52,
-  normal: 64,
+  comfortable: 64,
 }
 
 export function PortfolioTable({
