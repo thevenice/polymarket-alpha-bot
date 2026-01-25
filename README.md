@@ -18,7 +18,7 @@ Polymarket alpha detection platform. Finds covering portfolios across correlated
 ## Quick Start
 
 ```bash
-cp .env.example .env          # Add OPENROUTER_API_KEY (and CHAINSTACK_NODE for blockchain transactions)
+cp .env.example .env
 
 # With make
 make install && make dev
