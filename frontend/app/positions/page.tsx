@@ -50,6 +50,10 @@ export interface Position {
   current_value: number
   pnl: number
   pnl_pct: number
+
+  // Selling in progress flags (persisted across page refresh)
+  selling_target: boolean
+  selling_cover: boolean
 }
 
 interface PositionsResponse {

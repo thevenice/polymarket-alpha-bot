@@ -93,9 +93,13 @@ async def sell_position_tokens(position_id: str, req: SellTokenRequest):
     Uses FOK (Fill-or-Kill) market order at 10% below market price.
     """
     manager = get_manager()
+    storage = get_storage()
 
     if not manager.wallet.is_unlocked:
         raise HTTPException(status_code=401, detail="Unlock wallet first")
+
+    # Mark as selling (persists across page refresh)
+    storage.update_selling_status(position_id, req.side, True)
 
     try:
         result = await manager.sell_position_tokens(
@@ -123,6 +127,11 @@ async def sell_position_tokens(position_id: str, req: SellTokenRequest):
     except Exception as e:
         logger.exception("Sell tokens failed")
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Clear selling status when done (success or failure)
+        storage.update_selling_status(position_id, req.side, False)
+        # Invalidate cache so next request gets fresh data
+        get_service().invalidate_cache()
 
 
 @router.post("/{position_id}/merge", response_model=MergeTokensResponse)

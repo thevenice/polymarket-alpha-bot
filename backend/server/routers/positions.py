@@ -118,6 +118,10 @@ class PositionResponse(BaseModel):
     pnl: float
     pnl_pct: float
 
+    # Selling in progress flags
+    selling_target: bool
+    selling_cover: bool
+
 
 class PositionsListResponse(BaseModel):
     """List of positions with summary stats."""

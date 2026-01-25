@@ -53,6 +53,8 @@ class PositionEntry:
     target_clob_filled: bool = False
     cover_clob_filled: bool = False
     notes: Optional[str] = None
+    selling_target: bool = False
+    selling_cover: bool = False
 
 
 class PositionStorage:
@@ -123,6 +125,23 @@ class PositionStorage:
                     p[f"{side}_clob_filled"] = filled
                     self.save_all(positions)
                     logger.info(f"Updated CLOB status for {position_id} ({side})")
+                    return True
+            return False
+
+    def update_selling_status(
+        self,
+        position_id: str,
+        side: str,
+        selling: bool,
+    ) -> bool:
+        """Update selling status (thread-safe). Side is 'target' or 'cover'."""
+        with _storage_lock:
+            positions = self.load_all()
+            for p in positions:
+                if p.get("position_id") == position_id:
+                    p[f"selling_{side}"] = selling
+                    self.save_all(positions)
+                    logger.debug(f"Selling {side}={selling} for {position_id}")
                     return True
             return False
 

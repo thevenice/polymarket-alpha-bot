@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from typing import Optional
+
 import httpx
 from web3 import Web3
 from loguru import logger
@@ -90,9 +91,16 @@ class LivePosition:
     pnl: float
     pnl_pct: float
 
+    # Selling in progress flags (persisted across page refresh)
+    selling_target: bool
+    selling_cover: bool
+
 
 class PositionService:
     """Enrich positions with live blockchain and price data."""
+
+    # TTL cache for enriched positions (avoid repeated RPC/API calls)
+    CACHE_TTL_SECONDS = 2.0
 
     def __init__(self, storage: PositionStorage, wallet: WalletManager):
         self.storage = storage
@@ -103,6 +111,10 @@ class PositionService:
         self._w3: Optional[Web3] = None
         self._ctf = None
         self._multicall = None
+
+        # Positions cache with TTL
+        self._positions_cache: list[LivePosition] = []
+        self._positions_cache_time: float = 0
 
     def _get_web3(self) -> Web3:
         """Get or create Web3 instance."""
@@ -200,6 +212,18 @@ class PositionService:
         if market_id in self._token_cache:
             return self._token_cache[market_id]
 
+        # Try TokenResolver first (fast, pre-cached on startup)
+        try:
+            from server.token_resolver import token_resolver
+
+            tokens = token_resolver.get_tokens_for_market(market_id)
+            if len(tokens) >= 2:
+                self._token_cache[market_id] = (tokens[0], tokens[1])
+                return (tokens[0], tokens[1])
+        except Exception:
+            pass
+
+        # Fallback to HTTP call if not in resolver
         try:
             import json
 
@@ -312,11 +336,30 @@ class PositionService:
         return self._enrich_positions([entry])[0]
 
     def get_all_live(self) -> list[LivePosition]:
-        """Get all positions with live balances and prices."""
+        """Get all positions with live balances and prices (cached)."""
+        import time
+
+        now = time.time()
+        if (
+            self._positions_cache
+            and (now - self._positions_cache_time) < self.CACHE_TTL_SECONDS
+        ):
+            return self._positions_cache
+
         entries = self.storage.load_all()
         if not entries:
+            self._positions_cache = []
+            self._positions_cache_time = now
             return []
-        return self._enrich_positions(entries)
+
+        positions = self._enrich_positions(entries)
+        self._positions_cache = positions
+        self._positions_cache_time = now
+        return positions
+
+    def invalidate_cache(self) -> None:
+        """Invalidate the positions cache (call after mutations)."""
+        self._positions_cache_time = 0
 
     def _enrich_positions(self, entries: list[dict]) -> list[LivePosition]:
         """Enrich multiple positions with live data using batched queries."""
@@ -435,6 +478,8 @@ class PositionService:
                     current_value=current_value,
                     pnl=pnl,
                     pnl_pct=pnl_pct,
+                    selling_target=entry.get("selling_target", False),
+                    selling_cover=entry.get("selling_cover", False),
                 )
             )
 

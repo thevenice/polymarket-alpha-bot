@@ -81,11 +81,15 @@ export function PositionExpandedDetails({ position: p, onRefresh }: PositionExpa
     }
   }
 
-  const targetCanSell = p.target_balance > 0.01
+  // Use persisted selling state (survives page refresh)
+  const isSellingTarget = p.selling_target || loading === 'target-wanted'
+  const isSellingCover = p.selling_cover || loading === 'cover-wanted'
+
+  const targetCanSell = p.target_balance > 0.01 && !p.selling_target
   const targetCanSellUnwanted = p.target_unwanted_balance > 0.01
   const targetCanMerge = Math.min(p.target_balance, p.target_unwanted_balance) > 0.01
 
-  const coverCanSell = p.cover_balance > 0.01
+  const coverCanSell = p.cover_balance > 0.01 && !p.selling_cover
   const coverCanSellUnwanted = p.cover_unwanted_balance > 0.01
   const coverCanMerge = Math.min(p.cover_balance, p.cover_unwanted_balance) > 0.01
 
@@ -110,13 +114,14 @@ export function PositionExpandedDetails({ position: p, onRefresh }: PositionExpa
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {targetCanSell && (
+            {(targetCanSell || isSellingTarget) && (
               <button
                 onClick={() => handleSell('target', 'wanted')}
-                disabled={loading !== null}
-                className="px-2 py-1 text-xs bg-rose/15 text-rose hover:bg-rose/25 rounded border border-rose/30 disabled:opacity-50"
+                disabled={loading !== null || isSellingTarget}
+                className="px-2 py-1 text-xs bg-rose/15 text-rose hover:bg-rose/25 rounded border border-rose/30 disabled:opacity-50 flex items-center gap-1"
               >
-                {loading === 'target-wanted' ? 'Selling...' : `Sell ${p.target_position} → ~$${(p.target_balance * p.target_current_price * 0.9).toFixed(2)}`}
+                {isSellingTarget && <span className="w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin" />}
+                {isSellingTarget ? 'Selling...' : `Sell ${p.target_position} → ~$${(p.target_balance * p.target_current_price * 0.9).toFixed(2)}`}
               </button>
             )}
             {targetCanSellUnwanted && (
@@ -152,13 +157,14 @@ export function PositionExpandedDetails({ position: p, onRefresh }: PositionExpa
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {coverCanSell && (
+            {(coverCanSell || isSellingCover) && (
               <button
                 onClick={() => handleSell('cover', 'wanted')}
-                disabled={loading !== null}
-                className="px-2 py-1 text-xs bg-rose/15 text-rose hover:bg-rose/25 rounded border border-rose/30 disabled:opacity-50"
+                disabled={loading !== null || isSellingCover}
+                className="px-2 py-1 text-xs bg-rose/15 text-rose hover:bg-rose/25 rounded border border-rose/30 disabled:opacity-50 flex items-center gap-1"
               >
-                {loading === 'cover-wanted' ? 'Selling...' : `Sell ${p.cover_position} → ~$${(p.cover_balance * p.cover_current_price * 0.9).toFixed(2)}`}
+                {isSellingCover && <span className="w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin" />}
+                {isSellingCover ? 'Selling...' : `Sell ${p.cover_position} → ~$${(p.cover_balance * p.cover_current_price * 0.9).toFixed(2)}`}
               </button>
             )}
             {coverCanSellUnwanted && (

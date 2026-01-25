@@ -26,11 +26,15 @@ export function PositionActionsDropdown({ position: p, onRefresh }: PositionActi
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [open])
 
-  const canSellTarget = p.target_balance > 0.01
-  const canSellCover = p.cover_balance > 0.01
+  const canSellTarget = p.target_balance > 0.01 && !p.selling_target
+  const canSellCover = p.cover_balance > 0.01 && !p.selling_cover
   const canMerge =
     Math.min(p.target_balance, p.target_unwanted_balance) > 0.01 ||
     Math.min(p.cover_balance, p.cover_unwanted_balance) > 0.01
+
+  // Use persisted selling state (survives page refresh)
+  const isSellingTarget = p.selling_target || loading === 'sell-target'
+  const isSellingCover = p.selling_cover || loading === 'sell-cover'
 
   const handleSell = async (side: 'target' | 'cover') => {
     setLoading(`sell-${side}`)
@@ -97,20 +101,20 @@ export function PositionActionsDropdown({ position: p, onRefresh }: PositionActi
 
           <button
             onClick={() => handleSell('target')}
-            disabled={!canSellTarget || loading !== null}
+            disabled={!canSellTarget || loading !== null || isSellingTarget}
             className="w-full px-3 py-2 text-left text-sm hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
           >
-            <span>Sell Target</span>
-            {loading === 'sell-target' && <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />}
+            <span>{isSellingTarget ? 'Selling...' : 'Sell Target'}</span>
+            {isSellingTarget && <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />}
           </button>
 
           <button
             onClick={() => handleSell('cover')}
-            disabled={!canSellCover || loading !== null}
+            disabled={!canSellCover || loading !== null || isSellingCover}
             className="w-full px-3 py-2 text-left text-sm hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
           >
-            <span>Sell Cover</span>
-            {loading === 'sell-cover' && <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />}
+            <span>{isSellingCover ? 'Selling...' : 'Sell Cover'}</span>
+            {isSellingCover && <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />}
           </button>
 
           <button
